@@ -80,3 +80,9 @@ if __name__ == "__main__":
         print(f"Инфляция: {inf.iloc[-1]:.2f}%")
     else:
         print("Данные не получены.")
+
+"""Возвращает последнее (актуальное) значение инфляции."""
+
+def get_latest_inflation():
+    df = get_inflation()
+    return df.iloc[-1]
