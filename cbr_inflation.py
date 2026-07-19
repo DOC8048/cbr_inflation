@@ -41,13 +41,15 @@ def get_inflation(start_date='2013-01-01', end_date=None):
     for item in root.findall('.//RI'):
         dts_elem = item.find('DTS')
         inf_elem = item.find('infVal')
-        if dts_elem is not None and inf_elem is not None:
+        target_elem = item.find('AimVal')
+        if dts_elem is not None and inf_elem is not None and target_elem is not None:
             # Дата в формате MM.YYYY, превратим в datetime (первый день месяца)
             month, year = dts_elem.text.split('.')
             date_str = f"{year}-{month}-01"
             date = pd.to_datetime(date_str)
-            value = float(inf_elem.text.replace(',', '.'))
-            data.append({'date': date, 'value': value})
+            inf_val = float(inf_elem.text.replace(',','.'))
+            target_val = float(target_elem.text.replace(',','.'))
+            data.append({'date': date, 'inflation': inf_val, 'target': target_val})
     
     # Если не нашли, попробуем с пространством имён (на случай, если потребуется)
     if not data:
@@ -55,34 +57,26 @@ def get_inflation(start_date='2013-01-01', end_date=None):
         for item in root.findall('.//cbr:RI', ns):
             dts_elem = item.find('cbr:DTS', ns)
             inf_elem = item.find('cbr:infVal', ns)
-            if dts_elem is not None and inf_elem is not None:
+            target_elem = item.find('cbr:AimVal', ns)
+            if dts_elem is not None and inf_elem is not None and target_elem is not None:
                 month, year = dts_elem.text.split('.')
                 date_str = f"{year}-{month}-01"
                 date = pd.to_datetime(date_str)
-                value = float(inf_elem.text.replace(',', '.'))
-                data.append({'date': date, 'value': value})
+                inf_val = float(inf_elem.text.replace(',','.'))
+                target_val = float(target_elem.text.replace(',','.'))
+                data.append({'date': date, 'inflation': inf_val, 'target': target_val})
     
     if not data:
-        print("Не удалось найти данные. Проверьте структуру XML.")
-        print(response.text[:1000])
-        return None
+        raise ValueError("Не удалось извлечь данные из ответа.")
     
     df = pd.DataFrame(data)
     df = df.sort_values('date').reset_index(drop=True)
-    result = df.set_index('date')['value']
-    return result
-
-# Пример использования
-if __name__ == "__main__":
-    inf = get_inflation('2020-01-01')
-    if inf is not None:
-        # print(inf.tail())
-        print(f"Инфляция: {inf.iloc[-1]:.2f}%")
-    else:
-        print("Данные не получены.")
-
-"""Возвращает последнее (актуальное) значение инфляции."""
+    return df
 
 def get_latest_inflation():
     df = get_inflation()
-    return df.iloc[-1]
+    return df['inflation'].iloc[-1]
+    
+def get_latest_target():
+    df = get_inflation()
+    return df['target'].iloc[-1]
